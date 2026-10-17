@@ -1,0 +1,26 @@
+name: HitHealth build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: mvn -B clean verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hithealth-1.0.0
+          path: target/hithealth-1.0.0.jar
+          if-no-files-found: error

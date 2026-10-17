@@ -1,0 +1,57 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Attack a zombie with a bow
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: hithealth-version
+    attributes:
+      label: HitHealth version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: paper-version
+    attributes:
+      label: Paper version
+      description: Output of `/version`.
+    validations:
+      required: true
+  - type: input
+    id: java-version
+    attributes:
+      label: Java version
+      placeholder: "21"
+    validations:
+      required: true
+  - type: dropdown
+    id: geyser
+    attributes:
+      label: Did the player join through Geyser (Bedrock)?
+      options:
+        - "No"
+        - "Yes"
+        - Both Java and Bedrock players are affected
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server log and config.yml
+      description: Errors from the console and your `plugins/HitHealth/config.yml`, if relevant.
+      render: text

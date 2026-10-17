@@ -1,0 +1,44 @@
+# Text shown on the action bar (MiniMessage format)
+# <name>: target name (custom name for named mobs, otherwise the mob name in each player's language)
+# <color>...</color>: color based on the remaining HP ratio
+# <hp>: remaining HP  <max>: max HP  <damage>: damage from the latest hit
+format: "<white><name></white> <color>❤ <hp>/<max></color>"
+
+# Color thresholds by remaining HP ratio (0.0-1.0)
+# At or above high: colors.high, at or above low: colors.mid, below low: colors.low
+thresholds:
+  high: 0.5
+  low: 0.25
+colors:
+  high: "#55FF55"
+  mid: "#FFFF55"
+  low: "#FF5555"
+
+# Decimal places for HP (0-2)
+decimals: 1
+
+# Also show HP when attacking players
+show-players: true
+
+# Optional damage suffix, appended to the format above when enabled
+# Damage is final event health damage after mitigation/absorption, capped to pre-hit HP.
+# The number uses the same decimal setting as HP. It does not include absorbed damage.
+damage:
+  enabled: false
+  format: " <gray>(-<damage>)</gray>"
+
+# 0: send once and let the client's action bar fade naturally (previous behavior).
+# Positive values: resend once per second until this duration expires, then clear.
+# Range: 0-60 seconds. Fractions are rounded up to the next server tick.
+# Each eligible hit replaces the current target and restarts the duration.
+display:
+  duration-seconds: 0.0
+
+# Ignore targets in any listed world OR of any listed Bukkit EntityType.
+# Names are case-insensitive. Empty lists exclude nothing.
+# Set enabled to false to bypass both lists without deleting them.
+# show-players and the built-in armor-stand filter still apply separately.
+exclusions:
+  enabled: true
+  worlds: []           # Example: [world_nether, lobby]
+  entity-types: []     # Example: [WITHER, ENDER_DRAGON]

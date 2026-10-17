@@ -1,0 +1,23 @@
+name: HitHealth
+version: '${project.version}'
+main: dev.spa.hithealth.HitHealthPlugin
+api-version: "1.21"
+author: spa
+description: Shows the remaining HP of the target you attack on your action bar
+
+commands:
+  hithealth:
+    description: Toggle the HP display on or off
+    usage: /hithealth [on|off]
+    permission: hithealth.toggle
+
+permissions:
+  hithealth.use:
+    description: Shows the HP of attacked targets
+    default: true
+  hithealth.toggle:
+    description: Allows toggling your own display with /hithealth
+    default: true
+  hithealth.reload:
+    description: Allows reloading the config with /hithealth reload
+    default: op
