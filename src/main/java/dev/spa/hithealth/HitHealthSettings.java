@@ -15,18 +15,32 @@ public final class HitHealthSettings {
     private static final double MAX_DURATION_SECONDS = 60.0;
     private static final double TICKS_PER_SECOND = 20.0;
 
+    private static final int DEFAULT_PLACEHOLDER_TIMEOUT_SECONDS = 10;
+    private static final int MIN_PLACEHOLDER_TIMEOUT_SECONDS = 1;
+    private static final int MAX_PLACEHOLDER_TIMEOUT_SECONDS = 600;
+
     private final HealthFormatter formatter;
     private final boolean showPlayers;
     private final long displayDurationTicks;
+    private final DisplayMode displayMode;
+    private final BossBarSettings bossBarSettings;
+    private final BarSettings barSettings;
+    private final long placeholderTimeoutMillis;
     private final boolean exclusionsEnabled;
     private final Set<String> excludedWorlds;
     private final Set<EntityType> excludedEntityTypes;
 
     private HitHealthSettings(HealthFormatter formatter, boolean showPlayers, long displayDurationTicks,
-            boolean exclusionsEnabled, Set<String> excludedWorlds, Set<EntityType> excludedEntityTypes) {
+            DisplayMode displayMode, BossBarSettings bossBarSettings, BarSettings barSettings,
+            long placeholderTimeoutMillis, boolean exclusionsEnabled, Set<String> excludedWorlds,
+            Set<EntityType> excludedEntityTypes) {
         this.formatter = formatter;
         this.showPlayers = showPlayers;
         this.displayDurationTicks = displayDurationTicks;
+        this.displayMode = displayMode;
+        this.bossBarSettings = bossBarSettings;
+        this.barSettings = barSettings;
+        this.placeholderTimeoutMillis = placeholderTimeoutMillis;
         this.exclusionsEnabled = exclusionsEnabled;
         this.excludedWorlds = Set.copyOf(excludedWorlds);
         this.excludedEntityTypes = Set.copyOf(excludedEntityTypes);
@@ -59,13 +73,32 @@ public final class HitHealthSettings {
                     + "'; use a Bukkit EntityType name. Ignoring it.");
         }
 
-        return new HitHealthSettings(new HealthFormatter(config, logger),
+        BarSettings barSettings = BarSettings.load(config, logger);
+        return new HitHealthSettings(new HealthFormatter(config, logger, barSettings),
                 bool(config, "show-players", true, logger), durationTicks(config, logger),
+                displayMode(config, logger), BossBarSettings.load(config, logger), barSettings,
+                placeholderTimeoutMillis(config, logger),
                 bool(config, "exclusions.enabled", true, logger), worlds, entityTypes);
     }
 
     public HealthFormatter formatter() {
         return formatter;
+    }
+
+    public DisplayMode displayMode() {
+        return displayMode;
+    }
+
+    public BossBarSettings bossBarSettings() {
+        return bossBarSettings;
+    }
+
+    public BarSettings barSettings() {
+        return barSettings;
+    }
+
+    public long placeholderTimeoutMillis() {
+        return placeholderTimeoutMillis;
     }
 
     public boolean showPlayers() {
@@ -75,6 +108,16 @@ public final class HitHealthSettings {
     /** Zero preserves the single-send display; positive values are rounded up to whole ticks. */
     public long displayDurationTicks() {
         return displayDurationTicks;
+    }
+
+    /**
+     * The duration handed to the display controller. Boss bars cannot fade by themselves, so when
+     * the mode includes a boss bar and no positive display duration is configured, the boss bar's
+     * own hide delay is used instead.
+     */
+    public long effectiveDisplayDurationTicks() {
+        return displayDurationTicks > 0 || !displayMode.showsBossBar()
+                ? displayDurationTicks : bossBarSettings.hideAfterTicks();
     }
 
     /** A target is excluded if either its world or its entity type matches an enabled filter. */
@@ -100,6 +143,40 @@ public final class HitHealthSettings {
             seconds = MAX_DURATION_SECONDS;
         }
         return (long) Math.ceil(seconds * TICKS_PER_SECOND);
+    }
+
+    private static DisplayMode displayMode(ConfigurationSection config, Logger logger) {
+        Object value = config.get("display.mode");
+        if (value == null) {
+            return DisplayMode.ACTIONBAR;
+        }
+        if (value instanceof String text) {
+            try {
+                return DisplayMode.valueOf(text.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to the warning below.
+            }
+        }
+        logger.warning("Invalid display.mode '" + value
+                + "'; expected actionbar, bossbar, or both. Using actionbar.");
+        return DisplayMode.ACTIONBAR;
+    }
+
+    private static long placeholderTimeoutMillis(ConfigurationSection config, Logger logger) {
+        Object value = config.get("placeholderapi.target-timeout-seconds");
+        if (value == null) {
+            return DEFAULT_PLACEHOLDER_TIMEOUT_SECONDS * 1000L;
+        }
+        if (value instanceof Number number && Double.isFinite(number.doubleValue())
+                && number.doubleValue() == Math.rint(number.doubleValue())
+                && number.doubleValue() >= MIN_PLACEHOLDER_TIMEOUT_SECONDS
+                && number.doubleValue() <= MAX_PLACEHOLDER_TIMEOUT_SECONDS) {
+            return (long) number.doubleValue() * 1000L;
+        }
+        logger.warning("Invalid placeholderapi.target-timeout-seconds '" + value
+                + "'; expected an integer from 1 to 600. Using "
+                + DEFAULT_PLACEHOLDER_TIMEOUT_SECONDS + ".");
+        return DEFAULT_PLACEHOLDER_TIMEOUT_SECONDS * 1000L;
     }
 
     private static boolean bool(ConfigurationSection config, String path, boolean fallback, Logger logger) {

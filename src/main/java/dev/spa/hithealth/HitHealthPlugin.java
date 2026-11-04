@@ -9,10 +9,15 @@ public final class HitHealthPlugin extends JavaPlugin {
     private HitHealthSettings settings;
     private PlayerPreferences preferences;
     private HealthDisplayController displays;
+    private BossBarDisplay bossBars;
+    private LastHitTracker lastHits;
+    private PlaceholderApiHook placeholderApi;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        bossBars = new BossBarDisplay();
+        lastHits = new LastHitTracker();
         reloadSettings();
         preferences = new PlayerPreferences(new File(getDataFolder(), "players.yml"), getLogger());
         displays = new HealthDisplayController(new BukkitDisplayScheduler(this));
@@ -20,6 +25,7 @@ public final class HitHealthPlugin extends JavaPlugin {
         HitHealthCommand command = new HitHealthCommand(this);
         getCommand("hithealth").setExecutor(command);
         getCommand("hithealth").setTabCompleter(command);
+        registerPlaceholderApi();
     }
 
     public void reloadSettings() {
@@ -28,12 +34,28 @@ public final class HitHealthPlugin extends JavaPlugin {
         if (displays != null) {
             displays.cancelAll();
         }
+        if (bossBars != null) {
+            bossBars.hideAll();
+        }
     }
 
     @Override
     public void onDisable() {
         if (displays != null) {
             displays.cancelAll();
+        }
+        if (bossBars != null) {
+            bossBars.hideAll();
+        }
+        if (placeholderApi != null) {
+            placeholderApi.unregister();
+            placeholderApi = null;
+        }
+    }
+
+    private void registerPlaceholderApi() {
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            placeholderApi = PlaceholderApiHook.install(this);
         }
     }
 
@@ -51,6 +73,14 @@ public final class HitHealthPlugin extends JavaPlugin {
 
     HealthDisplayController displays() {
         return displays;
+    }
+
+    BossBarDisplay bossBars() {
+        return bossBars;
+    }
+
+    LastHitTracker lastHits() {
+        return lastHits;
     }
 
     public boolean isEnabledFor(UUID player) {

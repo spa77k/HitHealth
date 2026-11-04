@@ -3,6 +3,7 @@ package dev.spa.hithealth;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.logging.Logger;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -29,6 +30,7 @@ public final class HealthFormatter {
     private final TextColor midColor;
     private final TextColor lowColor;
     private final int decimals;
+    private final BarSettings bar;
 
     public HealthFormatter(ConfigurationSection config) {
         this(config, null);
@@ -36,6 +38,11 @@ public final class HealthFormatter {
 
     /** Validates configuration once, so invalid settings do not spam warnings on each hit. */
     public HealthFormatter(ConfigurationSection config, Logger logger) {
+        this(config, logger, BarSettings.load(config, logger));
+    }
+
+    HealthFormatter(ConfigurationSection config, Logger logger, BarSettings bar) {
+        this.bar = bar;
         Object configuredHigh = config.get("thresholds.high", DEFAULT_HIGH);
         Object configuredLow = config.get("thresholds.low", DEFAULT_LOW);
         if (validThreshold(configuredHigh) && validThreshold(configuredLow)
@@ -74,18 +81,47 @@ public final class HealthFormatter {
     }
 
     public TextColor colorFor(double health, double maxHealth) {
-        double maximum = nonNegativeFinite(maxHealth);
-        double ratio = maximum > 0 ? nonNegativeFinite(health) / maximum : 0;
+        double ratio = healthRatio(health, maxHealth);
         return ratio >= high ? highColor : ratio >= low ? midColor : lowColor;
     }
 
+    /**
+     * Boss bars use the same high/low thresholds as the text color, mapped to their fixed color set.
+     */
+    public BossBar.Color bossBarColorFor(double health, double maxHealth, boolean colorByHealth,
+            BossBar.Color fallback) {
+        if (!colorByHealth) {
+            return fallback;
+        }
+        double ratio = healthRatio(health, maxHealth);
+        return ratio >= high ? BossBar.Color.GREEN
+                : ratio >= low ? BossBar.Color.YELLOW : BossBar.Color.RED;
+    }
+
+    public static double healthRatio(double health, double maxHealth) {
+        double maximum = nonNegativeFinite(maxHealth);
+        return maximum > 0 ? Math.min(1, nonNegativeFinite(health) / maximum) : 0;
+    }
+
+    /** Integer percentage for PlaceholderAPI: rounded up while alive and zero at or below zero HP. */
+    public static int percent(double health, double maxHealth) {
+        double ratio = healthRatio(health, maxHealth);
+        return ratio <= 0 ? 0 : (int) Math.ceil(ratio * 100);
+    }
+
+    public BarSettings barSettings() {
+        return bar;
+    }
+
     private TagResolver placeholders(Component name, double health, double maxHealth, double damage) {
+        TextColor color = colorFor(health, maxHealth);
         return TagResolver.resolver(
                 Placeholder.component("name", name),
                 Placeholder.unparsed("hp", number(health)),
                 Placeholder.unparsed("max", number(maxHealth)),
                 Placeholder.unparsed("damage", number(damage)),
-                TagResolver.resolver("color", Tag.styling(colorFor(health, maxHealth))));
+                Placeholder.component("bar", bar.render(health, maxHealth, color)),
+                TagResolver.resolver("color", Tag.styling(color)));
     }
 
     private String validatedFormat(ConfigurationSection config, String path, String fallback, Logger logger) {
@@ -102,6 +138,11 @@ public final class HealthFormatter {
             warn(logger, "Invalid MiniMessage in '" + path + "'; using the default.");
             return fallback;
         }
+    }
+
+    /** Public number formatting shared by the placeholders and PlaceholderAPI expansion. */
+    public String formatNumber(double value) {
+        return number(value);
     }
 
     private String number(double value) {

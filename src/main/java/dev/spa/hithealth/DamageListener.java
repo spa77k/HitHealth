@@ -1,5 +1,6 @@
 package dev.spa.hithealth;
 
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -42,20 +43,21 @@ public final class DamageListener implements Listener {
         // Capture this hit before the target's health changes. Absorbed damage is
         // already excluded by getFinalDamage(), and overkill cannot remove extra HP.
         double damage = healthDamage(target.getHealth(), event.getFinalDamage());
-        plugin.displays().show(viewer.getUniqueId(), plugin.settings().displayDurationTicks(),
+        HitHealthSettings settings = plugin.settings();
+        plugin.lastHits().record(viewer.getUniqueId(), target.getUniqueId(), damage, System.currentTimeMillis());
+        plugin.displays().show(viewer.getUniqueId(), settings.effectiveDisplayDurationTicks(),
                 () -> viewer.isOnline() && viewer.hasPermission("hithealth.use")
                         && plugin.isEnabledFor(viewer.getUniqueId()) && canShow(target),
-                () -> show(viewer, target, damage),
-                () -> {
-                    if (viewer.isOnline()) {
-                        viewer.sendActionBar(Component.empty());
-                    }
-                });
+                () -> show(viewer, target, damage, settings),
+                () -> clear(viewer, settings));
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        plugin.displays().cancel(event.getPlayer().getUniqueId());
+        UUID viewerId = event.getPlayer().getUniqueId();
+        plugin.lastHits().remove(viewerId);
+        plugin.bossBars().hide(event.getPlayer());
+        plugin.displays().cancel(viewerId);
     }
 
     static double healthDamage(double health, double finalDamage) {
@@ -89,13 +91,31 @@ public final class DamageListener implements Listener {
         return null;
     }
 
-    private void show(Player viewer, LivingEntity target, double damage) {
+    private void show(Player viewer, LivingEntity target, double damage, HitHealthSettings settings) {
         if (!viewer.isOnline()) {
             return;
         }
         double health = target.isValid() && !target.isDead() ? target.getHealth() : 0;
         AttributeInstance max = target.getAttribute(Attribute.MAX_HEALTH);
         double maxHealth = max != null ? max.getValue() : health;
-        viewer.sendActionBar(plugin.formatter().render(target.name(), health, maxHealth, damage));
+        Component text = settings.formatter().render(target.name(), health, maxHealth, damage);
+        if (settings.displayMode().showsActionBar()) {
+            viewer.sendActionBar(text);
+        }
+        if (settings.displayMode().showsBossBar()) {
+            plugin.bossBars().show(viewer, settings, text, health, maxHealth);
+        }
+    }
+
+    private void clear(Player viewer, HitHealthSettings settings) {
+        if (!viewer.isOnline()) {
+            return;
+        }
+        if (settings.displayMode().showsActionBar()) {
+            viewer.sendActionBar(Component.empty());
+        }
+        if (settings.displayMode().showsBossBar()) {
+            plugin.bossBars().hide(viewer);
+        }
     }
 }

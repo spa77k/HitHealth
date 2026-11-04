@@ -1,8 +1,11 @@
-# Text shown on the action bar (MiniMessage format)
+# Text shown on the action bar or boss bar (MiniMessage format)
 # <name>: target name (custom name for named mobs, otherwise the mob name in each player's language)
 # <color>...</color>: color based on the remaining HP ratio
 # <hp>: remaining HP  <max>: max HP  <damage>: damage from the latest hit
+# <bar>: HP bar using the bar settings below
 format: "<white><name></white> <color>❤ <hp>/<max></color>"
+# Example with a bar:
+# format: "<white><name></white> <bar> <color><hp>/<max></color>"
 
 # Color thresholds by remaining HP ratio (0.0-1.0)
 # At or above high: colors.high, at or above low: colors.mid, below low: colors.low
@@ -27,12 +30,45 @@ damage:
   enabled: false
   format: " <gray>(-<damage>)</gray>"
 
-# 0: send once and let the client's action bar fade naturally (previous behavior).
-# Positive values: resend once per second until this duration expires, then clear.
-# Range: 0-60 seconds. Fractions are rounded up to the next server tick.
-# Each eligible hit replaces the current target and restarts the duration.
+# HP bar used by the <bar> placeholder
+# length: number of segments (1-40)
+# full: character(s) for filled segments (must not be empty)
+# empty: character(s) for empty segments (may be empty)
+# empty-color: hex color for empty segments; filled segments use the <color> color
+bar:
+  length: 10
+  full: "■"
+  empty: "□"
+  empty-color: "#555555"
+
+# Where to show the HP display:
+#   actionbar: action bar only (default, previous behavior)
+#   bossbar: boss bar only
+#   both: action bar and boss bar
+# Values are case-insensitive.
 display:
+  mode: actionbar
+  # 0: send once and let the client's action bar fade naturally (previous behavior).
+  # Positive values: resend once per second until this duration expires, then clear.
+  # Range: 0-60 seconds. Fractions are rounded up to the next server tick.
+  # In bossbar/both mode, 0 uses bossbar.hide-after-seconds instead.
   duration-seconds: 0.0
+
+# Boss bar appearance and lifetime
+# color-by-health: use GREEN / YELLOW / RED from thresholds.high and thresholds.low
+# color: BossBar.Color name used when color-by-health is false
+# overlay: PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, or NOTCHED_20
+# hide-after-seconds: used only when display.duration-seconds is 0 (0 < value <= 60)
+bossbar:
+  color-by-health: true
+  color: RED
+  overlay: PROGRESS
+  hide-after-seconds: 3.0
+
+# Optional PlaceholderAPI support. Values expire after the target timeout.
+# Range: 1-600 seconds.
+placeholderapi:
+  target-timeout-seconds: 10
 
 # Ignore targets in any listed world OR of any listed Bukkit EntityType.
 # Names are case-insensitive. Empty lists exclude nothing.

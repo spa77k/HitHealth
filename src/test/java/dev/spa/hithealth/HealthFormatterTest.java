@@ -302,6 +302,75 @@ class HealthFormatterTest {
         assertEquals(4, warnings.size());
     }
 
+    @Test
+    void barPlaceholderUsesTheDefaultBar() {
+        config.set("format", "<bar>");
+
+        assertEquals("■■■■■■□□□□", render(12, 20));
+        assertEquals("■□□□□□□□□□", render(0.01, 20));
+        assertEquals("□□□□□□□□□□", render(0, 20));
+        assertEquals("■■■■■■■■■■", render(20, 20));
+    }
+
+    @Test
+    void barPlaceholderUsesConfiguredCharactersAndLength() {
+        config.set("format", "<bar>");
+        config.set("bar.length", 4);
+        config.set("bar.full", "#");
+        config.set("bar.empty", "-");
+
+        assertEquals("##--", render(10, 20));
+    }
+
+    @Test
+    void barFilledSegmentsUseTheHealthColorAndEmptySegmentsUseTheirOwnColor() {
+        config.set("format", "<bar>");
+        config.set("bar.length", 2);
+        config.set("bar.full", "#");
+        config.set("bar.empty", "-");
+        config.set("bar.empty-color", "#112233");
+        Component actual = new HealthFormatter(config).render(Component.text("Zombie"), 20, 20);
+        Component expected = Component.text("##", TextColor.color(0x55FF55))
+                .append(Component.text("", TextColor.color(0x112233)));
+
+        assertEquals(expected.compact(), actual.compact());
+    }
+
+    @Test
+    void barPlaceholderIsAvailableInTheDamageSuffix() {
+        config.set("format", "");
+        config.set("damage.enabled", true);
+        config.set("damage.format", "<bar>");
+        config.set("bar.length", 2);
+        config.set("bar.full", "#");
+        config.set("bar.empty", "-");
+
+        assertEquals("##", render(20, 20, 8));
+    }
+
+    @Test
+    void publicNumberFormattingMatchesThePlaceholders() {
+        config.set("decimals", 2);
+        HealthFormatter formatter = new HealthFormatter(config);
+
+        assertEquals("0.01", formatter.formatNumber(0.001));
+        assertEquals("12.00", formatter.formatNumber(12));
+        assertEquals("0.00", formatter.formatNumber(-1));
+        assertEquals("0.00", formatter.formatNumber(Double.NaN));
+    }
+
+    @Test
+    void percentRoundsUpWhileAliveAndIsZeroWhenDead() {
+        assertEquals(100, HealthFormatter.percent(20, 20));
+        assertEquals(100, HealthFormatter.percent(100, 20));
+        assertEquals(50, HealthFormatter.percent(10, 20));
+        assertEquals(1, HealthFormatter.percent(0.01, 20));
+        assertEquals(0, HealthFormatter.percent(0, 20));
+        assertEquals(0, HealthFormatter.percent(-1, 20));
+        assertEquals(0, HealthFormatter.percent(10, 0));
+        assertEquals(0, HealthFormatter.percent(Double.NaN, 20));
+    }
+
     private static Logger logger(List<String> warnings) {
         Logger logger = Logger.getAnonymousLogger();
         logger.setUseParentHandlers(false);

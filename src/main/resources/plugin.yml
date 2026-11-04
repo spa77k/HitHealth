@@ -3,7 +3,8 @@ version: '${project.version}'
 main: dev.spa.hithealth.HitHealthPlugin
 api-version: "1.21.4"
 author: spa
-description: Shows the remaining HP of the target you attack on your action bar
+description: Shows the remaining HP of the target you attack on your action bar or boss bar
+softdepend: [PlaceholderAPI]
 
 commands:
   hithealth:
