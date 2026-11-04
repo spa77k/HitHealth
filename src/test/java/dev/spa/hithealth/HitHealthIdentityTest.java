@@ -35,7 +35,7 @@ class HitHealthIdentityTest {
         assertEquals(HitHealthPlugin.class.getName(), descriptor.getMain());
         assertEquals("dev.spa.hithealth.HitHealthPlugin", descriptor.getMain());
         assertTrue(JavaPlugin.class.isAssignableFrom(Class.forName(descriptor.getMain())));
-        assertEquals("1.21", descriptor.getAPIVersion());
+        assertEquals("1.21.4", descriptor.getAPIVersion());
     }
 
     @Test
@@ -43,8 +43,8 @@ class HitHealthIdentityTest {
         Map<String, Map<String, Object>> commands = descriptor().getCommands();
         assertEquals(Set.of("hithealth"), commands.keySet());
         assertFalse(commands.get("hithealth").containsKey("aliases"));
-        assertEquals("hithealth.toggle", commands.get("hithealth").get("permission"));
-        assertEquals("/hithealth [on|off]", commands.get("hithealth").get("usage"));
+        assertFalse(commands.get("hithealth").containsKey("permission"));
+        assertEquals("/hithealth [on|off|reload]", commands.get("hithealth").get("usage"));
         assertTrue(descriptor().getProvides().isEmpty());
     }
 
@@ -60,21 +60,28 @@ class HitHealthIdentityTest {
     }
 
     @Test
-    void tabCompletionChecksOnlyTheSupportedReloadPermission() {
+    void tabCompletionOffersOnlyTheOptionsTheSenderMayUse() {
         List<String> checkedPermissions = new ArrayList<>();
-        CommandSender sender = sender(Set.of("hithealth.reload"), checkedPermissions, new ArrayList<>());
-        assertEquals(List.of("on", "off", "reload"), new HitHealthCommand(null)
-                .onTabComplete(sender, null, "hithealth", new String[] {""}));
-        assertEquals(List.of("hithealth.reload"), checkedPermissions);
+        CommandSender reloadOnly = sender(Set.of("hithealth.reload"), checkedPermissions, new ArrayList<>());
+        assertEquals(List.of("reload"), new HitHealthCommand(null)
+                .onTabComplete(reloadOnly, null, "hithealth", new String[] {""}));
+        assertEquals(List.of("hithealth.toggle", "hithealth.reload"), checkedPermissions);
     }
 
     @Test
     void tabCompletionWithoutReloadPermissionOmitsReload() {
-        CommandSender sender = sender(Set.of(), new ArrayList<>(), new ArrayList<>());
+        CommandSender sender = sender(Set.of("hithealth.toggle"), new ArrayList<>(), new ArrayList<>());
         HitHealthCommand command = new HitHealthCommand(null);
         assertEquals(List.of("on", "off"), command.onTabComplete(sender, null, "hithealth", new String[] {""}));
         assertEquals(List.of(), command.onTabComplete(sender, null, "hithealth", new String[] {"r"}));
         assertEquals(List.of(), command.onTabComplete(sender, null, "hithealth", new String[] {"on", ""}));
+    }
+
+    @Test
+    void tabCompletionWithoutAnyPermissionOmitsEverything() {
+        CommandSender sender = sender(Set.of(), new ArrayList<>(), new ArrayList<>());
+        assertEquals(List.of(), new HitHealthCommand(null)
+                .onTabComplete(sender, null, "hithealth", new String[] {""}));
     }
 
     @Test
@@ -96,6 +103,33 @@ class HitHealthIdentityTest {
     }
 
     @Test
+    void playerWithoutTogglePermissionIsDeniedForOnOffAndToggle() {
+        for (String action : List.of("on", "off", "toggle")) {
+            List<String> checkedPermissions = new ArrayList<>();
+            List<Component> messages = new ArrayList<>();
+            Player player = player(Set.of(), checkedPermissions, messages);
+            assertTrue(new HitHealthCommand(null).onCommand(player, null, "hithealth", new String[] {action}));
+            assertTrue(checkedPermissions.contains("hithealth.toggle"));
+            assertEquals(List.of(Messages.NO_PERMISSION.text(player)), plain(messages));
+        }
+    }
+
+    @Test
+    void usageShowsReloadOnlyWhenTheSenderMayReload() {
+        List<String> withoutReloadChecked = new ArrayList<>();
+        List<Component> withoutReloadMessages = new ArrayList<>();
+        Player withoutReload = player(Set.of("hithealth.toggle"), withoutReloadChecked, withoutReloadMessages);
+        assertTrue(new HitHealthCommand(null).onCommand(withoutReload, null, "hithealth", new String[] {"bad"}));
+        assertEquals(List.of("Usage: /hithealth [on|off]"), plain(withoutReloadMessages));
+
+        List<String> withReloadChecked = new ArrayList<>();
+        List<Component> withReloadMessages = new ArrayList<>();
+        Player withReload = player(Set.of("hithealth.toggle", "hithealth.reload"), withReloadChecked, withReloadMessages);
+        assertTrue(new HitHealthCommand(null).onCommand(withReload, null, "hithealth", new String[] {"bad"}));
+        assertEquals(List.of("Usage: /hithealth [on|off|reload]"), plain(withReloadMessages));
+    }
+
+    @Test
     void allSupportedLocalesUseTheCurrentBrandAndCommand() {
         for (Locale locale : List.of(Locale.ENGLISH, Locale.JAPANESE, Locale.SIMPLIFIED_CHINESE, Locale.KOREAN)) {
             Player player = (Player) Proxy.newProxyInstance(Player.class.getClassLoader(),
@@ -104,7 +138,8 @@ class HitHealthIdentityTest {
                         throw new UnsupportedOperationException(method.getName());
                     });
             assertTrue(Messages.RELOADED.text(player).contains("HitHealth"));
-            assertTrue(Messages.USAGE.text(player, "hithealth").contains("/hithealth [on|off]"));
+            assertTrue(Messages.USAGE.text(player, "hithealth", "on|off").contains("/hithealth [on|off]"));
+            assertTrue(Messages.USAGE.text(player, "hithealth", "on|off|reload").contains("/hithealth [on|off|reload]"));
         }
     }
 
@@ -125,6 +160,24 @@ class HitHealthIdentityTest {
                     if (method.getName().equals("sendMessage") && args[0] instanceof Component message) {
                         messages.add(message);
                         return null;
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static Player player(Set<String> permissions, List<String> checked, List<Component> messages) {
+        return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(),
+                new Class<?>[] {Player.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("hasPermission")) {
+                        checked.add((String) args[0]);
+                        return permissions.contains(args[0]);
+                    }
+                    if (method.getName().equals("sendMessage") && args.length == 1 && args[0] instanceof Component message) {
+                        messages.add(message);
+                        return null;
+                    }
+                    if (method.getName().equals("locale")) {
+                        return Locale.ENGLISH;
                     }
                     throw new UnsupportedOperationException(method.getName());
                 });

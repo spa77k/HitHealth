@@ -21,6 +21,6 @@ jobs:
       - run: mvn -B clean verify
       - uses: actions/upload-artifact@v4
         with:
-          name: hithealth-1.0.0
-          path: target/hithealth-1.0.0.jar
+          name: hithealth
+          path: target/hithealth-*.jar
           if-no-files-found: error

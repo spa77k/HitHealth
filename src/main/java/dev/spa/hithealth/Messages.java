@@ -22,10 +22,10 @@ enum Messages {
             "只有玩家可以使用此命令。",
             "플레이어만 사용할 수 있습니다."),
     USAGE(
-            "Usage: /%s [on|off]",
-            "使い方: /%s [on|off]",
-            "用法：/%s [on|off]",
-            "사용법: /%s [on|off]"),
+            "Usage: /%s [%s]",
+            "使い方: /%s [%s]",
+            "用法：/%s [%s]",
+            "사용법: /%s [%s]"),
     ENABLED(
             "HP display for attacked targets is now on.",
             "攻撃した相手のHP表示をオンにしました。",

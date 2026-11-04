@@ -1,6 +1,8 @@
 package dev.spa.hithealth;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -19,7 +21,7 @@ public final class HitHealthCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        String action = args.length == 0 ? "toggle" : args[0].toLowerCase();
+        String action = args.length == 0 ? "toggle" : args[0].toLowerCase(Locale.ROOT);
         if (action.equals("reload")) {
             if (!sender.hasPermission("hithealth.reload")) {
                 sender.sendMessage(Component.text(Messages.NO_PERMISSION.text(sender), NamedTextColor.RED));
@@ -34,7 +36,12 @@ public final class HitHealthCommand implements TabExecutor {
             return true;
         }
         if (!List.of("on", "off", "toggle").contains(action)) {
-            sender.sendMessage(Component.text(Messages.USAGE.text(sender, label), NamedTextColor.RED));
+            sender.sendMessage(Component.text(Messages.USAGE.text(sender, label, usageOptions(sender)),
+                    NamedTextColor.RED));
+            return true;
+        }
+        if (!sender.hasPermission("hithealth.toggle")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION.text(sender), NamedTextColor.RED));
             return true;
         }
         boolean enabled = action.equals("toggle") ? !plugin.isEnabledFor(player.getUniqueId()) : action.equals("on");
@@ -50,8 +57,19 @@ public final class HitHealthCommand implements TabExecutor {
         if (args.length != 1) {
             return List.of();
         }
-        List<String> options = sender.hasPermission("hithealth.reload")
-                ? List.of("on", "off", "reload") : List.of("on", "off");
-        return options.stream().filter(option -> option.startsWith(args[0].toLowerCase())).toList();
+        List<String> options = new ArrayList<>();
+        if (sender.hasPermission("hithealth.toggle")) {
+            options.add("on");
+            options.add("off");
+        }
+        if (sender.hasPermission("hithealth.reload")) {
+            options.add("reload");
+        }
+        String prefix = args[0].toLowerCase(Locale.ROOT);
+        return options.stream().filter(option -> option.startsWith(prefix)).toList();
+    }
+
+    private static String usageOptions(CommandSender sender) {
+        return sender.hasPermission("hithealth.reload") ? "on|off|reload" : "on|off";
     }
 }

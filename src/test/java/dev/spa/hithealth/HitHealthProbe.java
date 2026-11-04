@@ -109,7 +109,7 @@ public final class HitHealthProbe extends JavaPlugin {
                             "日本語のクライアントには日本語で返す: " + plain(messages.getLast()));
                     viewerLocale = Locale.SIMPLIFIED_CHINESE;
                     command.onCommand(viewer, null, "hithealth", new String[] {"bad"});
-                    expect(plain(messages.getLast()).equals("用法：/hithealth [on|off]"),
+                    expect(plain(messages.getLast()).equals("用法：/hithealth [on|off|reload]"),
                             "中国語のクライアントには中国語で返す: " + plain(messages.getLast()));
                     viewerLocale = Locale.KOREA;
                     command.onCommand(viewer, null, "hithealth", new String[] {"off"});
