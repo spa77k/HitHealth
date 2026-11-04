@@ -2,6 +2,7 @@ package dev.spa.hithealth;
 
 import java.util.Locale;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.translation.GlobalTranslator;
 import org.bukkit.Bukkit;
@@ -57,24 +58,37 @@ public final class HitHealthPlaceholderExpansion extends PlaceholderExpansion {
         if (!isTargetPlaceholder(key)) {
             return null;
         }
+        HitHealthSettings settings = plugin.settings();
         LastHitTracker.Hit hit = plugin.lastHits().find(player.getUniqueId(), System.currentTimeMillis(),
-                plugin.settings().placeholderTimeoutMillis());
+                settings.placeholderTimeoutMillis());
         if (hit == null) {
             return "";
         }
-        Entity entity = Bukkit.getEntity(hit.targetId());
-        double health = 0;
-        double maxHealth = 0;
-        if (entity instanceof LivingEntity living) {
-            AttributeInstance maximum = living.getAttribute(Attribute.MAX_HEALTH);
-            maxHealth = maximum != null ? maximum.getValue() : 0;
-            if (living.isValid() && !living.isDead()) {
-                health = living.getHealth();
+        double health;
+        double maxHealth;
+        Component name;
+        if (Bukkit.isPrimaryThread()) {
+            Entity entity = Bukkit.getEntity(hit.targetId());
+            health = 0;
+            maxHealth = 0;
+            if (entity instanceof LivingEntity living) {
+                AttributeInstance maximum = living.getAttribute(Attribute.MAX_HEALTH);
+                maxHealth = maximum != null ? maximum.getValue() : 0;
+                if (living.isValid() && !living.isDead()) {
+                    health = living.getHealth();
+                }
             }
+            name = entity != null ? entity.name() : Component.empty();
+        } else {
+            // Off the server thread, reading a live entity is unsafe. Use the values captured by
+            // the display on its last server-thread render instead.
+            LastHitTracker.Snapshot snapshot = hit.snapshot();
+            health = snapshot != null ? snapshot.health() : 0;
+            maxHealth = snapshot != null ? snapshot.maxHealth() : 0;
+            name = snapshot != null ? snapshot.name() : Component.empty();
         }
-        HitHealthSettings settings = plugin.settings();
         return switch (key) {
-            case "target_name" -> targetName(entity, viewer);
+            case "target_name" -> targetName(name, viewer);
             case "target_hp" -> settings.formatter().formatNumber(health);
             case "target_max" -> settings.formatter().formatNumber(maxHealth);
             case "target_damage" -> settings.formatter().formatNumber(hit.damage());
@@ -91,11 +105,11 @@ public final class HitHealthPlaceholderExpansion extends PlaceholderExpansion {
         };
     }
 
-    private static String targetName(Entity entity, Player viewer) {
-        if (entity == null) {
+    private static String targetName(Component name, Player viewer) {
+        if (name == null) {
             return "";
         }
         return PlainTextComponentSerializer.plainText()
-                .serialize(GlobalTranslator.render(entity.name(), viewer.locale()));
+                .serialize(GlobalTranslator.render(name, viewer.locale()));
     }
 }

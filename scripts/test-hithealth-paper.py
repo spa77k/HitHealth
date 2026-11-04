@@ -28,10 +28,13 @@ def main():
         (ROOT / "target/hithealth-1.0.0.jar", plugins / "HitHealth.jar"),
     ):
         shutil.copy2(source, target)
+    if (SOURCE / "PlaceholderAPI.jar").exists():
+        shutil.copy2(SOURCE / "PlaceholderAPI.jar", plugins / "PlaceholderAPI.jar")
     with zipfile.ZipFile(plugins / "HitHealthProbe.jar", "w") as jar:
         jar.writestr("plugin.yml", "name: HitHealthProbe\nversion: 1\n"
                      "main: dev.spa.hithealth.HitHealthProbe\n"
-                     "api-version: '1.21'\ndepend: [HitHealth]\n")
+                     "api-version: '1.21'\ndepend: [HitHealth]\n"
+                     "softdepend: [PlaceholderAPI]\n")
         for source in (ROOT / "target/test-classes/dev/spa/hithealth").glob("HitHealthProbe*.class"):
             jar.write(source, "dev/spa/hithealth/" + source.name)
     (WORK / "eula.txt").write_text("eula=true\n")

@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -35,6 +36,8 @@ public final class HitHealthProbe extends JavaPlugin {
 
     private final List<Component> actionBars = new ArrayList<>();
     private final List<Component> messages = new ArrayList<>();
+    private final List<BossBar> shownBars = new ArrayList<>();
+    private final List<BossBar> hiddenBars = new ArrayList<>();
     private final UUID viewerId = UUID.randomUUID();
     private Locale viewerLocale = Locale.US;
     private Player viewer;
@@ -115,17 +118,135 @@ public final class HitHealthProbe extends JavaPlugin {
                     command.onCommand(viewer, null, "hithealth", new String[] {"off"});
                     expect(plain(messages.getLast()).equals("공격한 대상의 HP 표시를 껐습니다."),
                             "韓国語のクライアントには韓国語で返す: " + plain(messages.getLast()));
-                    getLogger().info("HITHEALTH_PROBE_PASS");
+
+                    command.onCommand(viewer, null, "hithealth", new String[] {"on"});
+                    expect(hithealth.isEnabledFor(viewerId), "ボスバー確認のためオンに戻る");
+                    stepBossBar(zombie);
                 } catch (Throwable error) {
                     fail(error);
-                } finally {
-                    Bukkit.shutdown();
                 }
             }, 2);
         } catch (Throwable error) {
             fail(error);
             Bukkit.shutdown();
         }
+    }
+
+    private void stepBossBar(Zombie zombie) {
+        hithealth.getConfig().set("display.mode", "bossbar");
+        hithealth.getConfig().set("bossbar.hide-after-seconds", 1.0);
+        hithealth.getConfig().set("format",
+                "<white><name></white> <bar> <color><hp>/<max></color>");
+        hithealth.saveConfig();
+        hithealth.reloadSettings();
+
+        int actionBarsBefore = actionBars.size();
+        int shownBefore = shownBars.size();
+        zombie.setHealth(15);
+        fire(zombie);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            try {
+                expect(actionBars.size() == actionBarsBefore, "ボスバーモードではアクションバーを出さない");
+                expect(shownBars.size() == shownBefore + 1,
+                        "ボスバーが1回表示される: " + (shownBars.size() - shownBefore));
+                BossBar bar = shownBars.getLast();
+                String text = plain(bar.name());
+                expect(text.contains("15.0/20.0"), "ボスバーにHPが入る: " + text);
+                expect(text.contains("■■■■■■■■□□"), "ボスバーに8/10のバーが入る: " + text);
+                expect(Math.abs(bar.progress() - 0.75f) < 0.001f,
+                        "ボスバーの進捗が0.75: " + bar.progress());
+                expect(bar.color() == BossBar.Color.GREEN, "HP75%は緑: " + bar.color());
+                getLogger().info("ok: bossbar " + text);
+
+                zombie.setHealth(4);
+                fire(zombie);
+                Bukkit.getScheduler().runTaskLater(this, () -> {
+                    try {
+                        expect(shownBars.getLast() == bar, "同じボスバーを使い回す");
+                        expect(bar.color() == BossBar.Color.RED, "HP20%は赤: " + bar.color());
+                        getLogger().info("ok: bossbar reused");
+
+                        int hidesBefore = hiddenBars.size();
+                        HitHealthCommand command = new HitHealthCommand(hithealth);
+                        command.onCommand(viewer, null, "hithealth", new String[] {"off"});
+                        expect(!hithealth.isEnabledFor(viewerId), "ボスバー表示中にオフにできる");
+                        expect(hiddenBars.size() == hidesBefore + 1 && hiddenBars.getLast() == bar,
+                                "/hithealth off でボスバーが隠れる");
+                        getLogger().info("ok: bossbar hidden by off");
+
+                        command.onCommand(viewer, null, "hithealth", new String[] {"on"});
+                        expect(hithealth.isEnabledFor(viewerId), "ボスバー確認後にオンへ戻す");
+
+                        int hidesAfterSecond = hiddenBars.size();
+                        zombie.setHealth(15);
+                        fire(zombie);
+                        Bukkit.getScheduler().runTaskLater(this, () -> {
+                            try {
+                                expect(hiddenBars.size() > hidesAfterSecond,
+                                        "1秒後にボスバーが自動で隠れる");
+                                getLogger().info("ok: bossbar hidden after timeout");
+                                stepPlaceholder(zombie);
+                            } catch (Throwable error) {
+                                fail(error);
+                            }
+                        }, 40);
+                    } catch (Throwable error) {
+                        fail(error);
+                    }
+                }, 2);
+            } catch (Throwable error) {
+                fail(error);
+            }
+        }, 2);
+    }
+
+    private void stepPlaceholder(Zombie zombie) {
+        if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            getLogger().info("ok: PlaceholderAPI absent, skipped");
+            pass();
+            return;
+        }
+        try {
+            hithealth.getConfig().set("display.mode", "actionbar");
+            hithealth.saveConfig();
+            hithealth.reloadSettings();
+            viewerLocale = Locale.US;
+            zombie.customName(Component.text("Target"));
+            zombie.setHealth(15);
+            int actionBarsBefore = actionBars.size();
+            fire(zombie);
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                try {
+                    expect(actionBars.size() == actionBarsBefore + 1, "プレースホルダー確認用に表示される");
+                    String values = HitHealthProbePapi.request(viewer);
+                    expect(values.equals("true|15.0|20.0|75|■■■■■■■■□□|Target"),
+                            "PlaceholderAPIの値: " + values);
+                    getLogger().info("ok: PlaceholderAPI " + values);
+
+                    zombie.setHealth(3);
+                    Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+                        try {
+                            String async = HitHealthProbePapi.request(viewer);
+                            expect(async.equals("true|15.0|20.0|75|■■■■■■■■□□|Target"),
+                                    "非同期でもスナップショットのHPを返す: " + async);
+                            getLogger().info("ok: PlaceholderAPI async " + async);
+                            pass();
+                        } catch (Throwable error) {
+                            fail(error);
+                        }
+                    });
+                } catch (Throwable error) {
+                    fail(error);
+                }
+            }, 2);
+        } catch (Throwable error) {
+            fail(error);
+        }
+    }
+
+    private void pass() {
+        getLogger().info("HITHEALTH_PROBE_PASS");
+        Bukkit.shutdown();
     }
 
     private void fire(Entity target) {
@@ -167,7 +288,16 @@ public final class HitHealthProbe extends JavaPlugin {
                         actionBars.add((Component) args[0]);
                         yield null;
                     }
+                    case "showBossBar" -> {
+                        shownBars.add((BossBar) args[0]);
+                        yield null;
+                    }
+                    case "hideBossBar" -> {
+                        hiddenBars.add((BossBar) args[0]);
+                        yield null;
+                    }
                     case "getUniqueId" -> viewerId;
+                    case "getPlayer" -> proxy;
                     case "getName" -> "Probe";
                     case "hasPermission", "isOnline" -> true;
                     case "equals" -> proxy == args[0];

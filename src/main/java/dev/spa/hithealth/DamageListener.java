@@ -98,6 +98,8 @@ public final class DamageListener implements Listener {
         double health = target.isValid() && !target.isDead() ? target.getHealth() : 0;
         AttributeInstance max = target.getAttribute(Attribute.MAX_HEALTH);
         double maxHealth = max != null ? max.getValue() : health;
+        plugin.lastHits().updateSnapshot(viewer.getUniqueId(), target.getUniqueId(), health, maxHealth,
+                target.name());
         Component text = settings.formatter().render(target.name(), health, maxHealth, damage);
         if (settings.displayMode().showsActionBar()) {
             viewer.sendActionBar(text);

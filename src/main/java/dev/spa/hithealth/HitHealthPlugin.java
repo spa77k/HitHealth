@@ -6,7 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class HitHealthPlugin extends JavaPlugin {
 
-    private HitHealthSettings settings;
+    private volatile HitHealthSettings settings;
     private PlayerPreferences preferences;
     private HealthDisplayController displays;
     private BossBarDisplay bossBars;
