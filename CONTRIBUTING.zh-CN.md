@@ -28,6 +28,8 @@
    python3 scripts/test-hithealth-paper.py
    ```
 
+   Paper 服务器 JAR 从 `paper-plugin-kit/server-data/` 读取（可通过 `PAPER_SERVER_DATA` 指定其他文件夹）。
+
 6. 如果改动影响用户可见的行为，请更新 `README.md`。翻译版 README 的更新不是必需的，但我们很感谢你这样做。
 
 ## 翻译

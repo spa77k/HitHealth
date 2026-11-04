@@ -202,7 +202,7 @@ The build runs the unit tests and writes `target/hithealth-1.0.0.jar`. To run on
 mvn -B test
 ```
 
-An optional Paper integration probe is available in `scripts/test-hithealth-paper.py`. After building, place the test server JAR at `server-data/paper-26.2-129.jar` and run:
+An optional Paper integration probe is available in `scripts/test-hithealth-paper.py`. After building, clone [paper-plugin-kit](https://github.com/spa77k/paper-plugin-kit) next to this repository, place the test server JAR at `paper-plugin-kit/server-data/paper-26.2-129.jar` (or point the `PAPER_SERVER_DATA` environment variable at another server-data folder) and run:
 
 ```bash
 JAVA_BIN=/path/to/java python3 scripts/test-hithealth-paper.py

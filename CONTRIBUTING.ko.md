@@ -28,6 +28,8 @@ HitHealth에 관심을 가져 주셔서 감사합니다. 버그 제보, 번역, 
    python3 scripts/test-hithealth-paper.py
    ```
 
+   Paper 서버 JAR은 `paper-plugin-kit/server-data/`에서 읽습니다 (`PAPER_SERVER_DATA`로 다른 폴더를 지정할 수 있습니다).
+
 6. 사용자에게 보이는 동작이 바뀐다면 `README.md`를 업데이트해 주세요. 번역된 README의 업데이트는 필수는 아니지만 해 주시면 큰 도움이 됩니다.
 
 ## 번역

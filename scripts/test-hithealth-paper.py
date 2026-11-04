@@ -1,76 +1,44 @@
 #!/usr/bin/env python3
 """隔離Paperで、攻撃後のHP表示・色・オンオフの保存を検証する。
 
-server-data/ にPaperのJAR（paper-26.2-129.jar）を置いておく。
+Paper本体と依存JARは paper-plugin-kit の server-data/ に置いておく
+（PAPER_SERVER_DATA で別のフォルダも指定できる）。
 先に `mvn -B package` を実行しておく（target/test-classes を使う）。
 """
 from pathlib import Path
 import os
-import shutil
-import subprocess
 import sys
-import threading
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "server-data"
-WORK = ROOT / "target/hithealth-paper-smoke"
-JAVA = os.environ.get("JAVA_BIN", "/opt/homebrew/opt/openjdk/bin/java")
+sys.path.insert(0, os.environ.get("PAPER_PLUGIN_KIT", str(ROOT.parent / "paper-plugin-kit")))
+from paper_smoke import PaperTest, check
+
+WORDS = ("ok: ", "HitHealth", "HITHEALTH_PROBE", "Exception", "Error")
 
 
 def main():
-    if WORK.exists():
-        shutil.rmtree(WORK)
-    plugins = WORK / "plugins"
-    plugins.mkdir(parents=True)
-    for source, target in (
-        (SOURCE / "paper-26.2-129.jar", WORK / "paper.jar"),
-        (ROOT / "target/hithealth-1.0.0.jar", plugins / "HitHealth.jar"),
-    ):
-        shutil.copy2(source, target)
-    if (SOURCE / "PlaceholderAPI.jar").exists():
-        shutil.copy2(SOURCE / "PlaceholderAPI.jar", plugins / "PlaceholderAPI.jar")
-    with zipfile.ZipFile(plugins / "HitHealthProbe.jar", "w") as jar:
-        jar.writestr("plugin.yml", "name: HitHealthProbe\nversion: 1\n"
-                     "main: dev.spa.hithealth.HitHealthProbe\n"
-                     "api-version: '1.21'\ndepend: [HitHealth]\n"
-                     "softdepend: [PlaceholderAPI]\n")
-        for source in (ROOT / "target/test-classes/dev/spa/hithealth").glob("HitHealthProbe*.class"):
-            jar.write(source, "dev/spa/hithealth/" + source.name)
-    (WORK / "eula.txt").write_text("eula=true\n")
-    (WORK / "server.properties").write_text(
-        "server-ip=127.0.0.1\nserver-port=25587\nonline-mode=false\n"
-        "spawn-protection=0\nmax-players=1\nlevel-type=minecraft:flat\n"
+    test = PaperTest(ROOT, "hithealth", "paper-26.2-129.jar", port=25587,
+                     properties=("max-players=1",))
+    test.prepare()
+    test.add_plugin(ROOT / "target/hithealth-1.0.0.jar", "HitHealth.jar")
+    test.add_dependency("PlaceholderAPI.jar", required=False)
+    test.make_probe(
+        "HitHealthProbe.jar",
+        "name: HitHealthProbe\nversion: 1\n"
+        "main: dev.spa.hithealth.HitHealthProbe\n"
+        "api-version: '1.21'\ndepend: [HitHealth]\n"
+        "softdepend: [PlaceholderAPI]\n",
+        "dev/spa/hithealth", "HitHealthProbe*.class",
     )
-    process = subprocess.Popen(
-        [JAVA, "-Xms512M", "-Xmx1G", "-jar", "paper.jar", "--nogui"],
-        cwd=WORK, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, text=True, bufsize=1,
+
+    output = test.run_until_marker(
+        ("HITHEALTH_PROBE_PASS", "HITHEALTH_PROBE_FAIL"),
+        timeout=240, stop_timeout=60, jvm_args=("-Xms512M", "-Xmx1G"), words=WORDS,
     )
-    lines = []
-    done = threading.Event()
+    check("HITHEALTH_PROBE_PASS" in output, "攻撃後のHP表示・色・保存を確認できませんでした")
 
-    def read_output():
-        for line in process.stdout:
-            lines.append(line)
-            if "HITHEALTH_PROBE_PASS" in line or "HITHEALTH_PROBE_FAIL" in line:
-                done.set()
-
-    threading.Thread(target=read_output, daemon=True).start()
-    try:
-        if not done.wait(240):
-            raise RuntimeError("Paperの検証が240秒以内に終わりませんでした")
-    finally:
-        try:
-            process.wait(60)
-        except subprocess.TimeoutExpired:
-            process.kill()
-    output = "".join(lines)
-    for line in lines:
-        if "ok: " in line or "HitHealth" in line or "HITHEALTH_PROBE" in line or "Exception" in line or "Error" in line:
-            print(line.rstrip())
-    if "HITHEALTH_PROBE_PASS" not in output:
-        sys.exit(1)
+    test.save_runtime()
+    print("PASS: 攻撃後のHP表示・色・オンオフの保存を確認しました。")
 
 
 if __name__ == "__main__":

@@ -31,6 +31,8 @@ Thanks for your interest in HitHealth. Bug reports, translations and pull reques
    python3 scripts/test-hithealth-paper.py
    ```
 
+   The Paper server JAR is read from `paper-plugin-kit/server-data/` (set `PAPER_SERVER_DATA` to use another folder).
+
 6. If you change user-facing behavior, update `README.md`. Updating the translated READMEs is appreciated but not required.
 
 ## Translations

@@ -28,6 +28,8 @@ HitHealth に興味を持っていただきありがとうございます。不�
    python3 scripts/test-hithealth-paper.py
    ```
 
+   Paper のサーバーJARは `paper-plugin-kit/server-data/` から読みます（`PAPER_SERVER_DATA` で別のフォルダも指定できます）。
+
 6. 利用者から見た動きが変わる場合は、`README.md` を更新してください。翻訳版 README の更新は必須ではありませんが、してもらえると助かります。
 
 ## 翻訳
