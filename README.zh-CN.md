@@ -12,7 +12,7 @@
 
 - Minecraft 服务器：PaperMC 26.2、26.3（Paper API `1.21.4` 及以上）
 - Java：21 及以上
-- 前置插件：无（可选支持 PlaceholderAPI）
+- 前置插件：无（可选支持 PlaceholderAPI 2.12.3 及以上；2.11.x 无法在 Paper 26.x 上加载）
 - 基岩版兼容：通过 Geyser 接入的基岩版玩家同样可以正常显示
 
 ## 功能
@@ -146,7 +146,7 @@ format: "<white><name></white> <bar> <color><hp>/<max></color>"
 
 ### PlaceholderAPI
 
-安装 [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) 后，HitHealth 会注册标识符为 `hithealth` 的可选扩展。无需额外配置；未安装 PlaceholderAPI 时插件也能正常加载。
+安装 [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) 后，HitHealth 会注册标识符为 `hithealth` 的可选扩展。无需额外配置；未安装 PlaceholderAPI 时插件也能正常加载。在服务器线程以外（例如异步计分板）请求时，HP 数值取自最近一次显示，而不是实时读取实体。
 
 | 占位符 | 说明 |
 |---|---|

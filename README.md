@@ -12,7 +12,7 @@ Zombie ❤ 12.0/20.0
 
 - Minecraft server: PaperMC 26.2 and 26.3 (Paper API `1.21.4` or later)
 - Java: 21 or later
-- Dependencies: None (optional: PlaceholderAPI for the placeholders below)
+- Dependencies: None (optional: PlaceholderAPI 2.12.3 or later for the placeholders below; 2.11.x does not load on Paper 26.x)
 - Bedrock Edition: Also works for Bedrock players connected via Geyser
 
 ## Features
@@ -161,7 +161,7 @@ The filled segment count is `ceil(ratio * bar.length)` while the target is alive
 
 ### PlaceholderAPI
 
-If [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) is installed, HitHealth registers an optional expansion with the `hithealth` identifier. No configuration is required, and the plugin still loads normally without PlaceholderAPI.
+If [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) is installed, HitHealth registers an optional expansion with the `hithealth` identifier. No configuration is required, and the plugin still loads normally without PlaceholderAPI. When a placeholder is requested off the server thread (for example by an asynchronous scoreboard), HP values come from the latest display instead of the live entity.
 
 | Placeholder | Description |
 |---|---|

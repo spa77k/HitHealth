@@ -12,7 +12,7 @@
 
 - Minecraft 서버: PaperMC 26.2·26.3 (Paper API `1.21.4` 이상)
 - Java: 21 이상
-- 의존 플러그인: 없음 (선택 사항: PlaceholderAPI)
+- 의존 플러그인: 없음 (선택 사항: PlaceholderAPI 2.12.3 이상. 2.11.x는 Paper 26.x에서 로드되지 않습니다)
 - 베드락 에디션: Geyser를 통해 접속한 플레이어에게도 표시됩니다
 
 ## 기능
@@ -146,7 +146,7 @@ format: "<white><name></white> <bar> <color><hp>/<max></color>"
 
 ### PlaceholderAPI
 
-[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)가 설치되어 있으면 식별자 `hithealth`의 선택적 확장을 등록합니다. 추가 설정은 필요 없으며 PlaceholderAPI가 없어도 플러그인은 정상적으로 로드됩니다.
+[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)가 설치되어 있으면 식별자 `hithealth`의 선택적 확장을 등록합니다. 추가 설정은 필요 없으며 PlaceholderAPI가 없어도 플러그인은 정상적으로 로드됩니다. 서버 스레드가 아닌 곳(예: 비동기 스코어보드)에서 요청하면 HP 값은 실시간 엔티티가 아니라 마지막으로 표시한 시점의 값입니다.
 
 | 플레이스홀더 | 설명 |
 |---|---|

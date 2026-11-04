@@ -12,7 +12,7 @@
 
 - Minecraft サーバー: PaperMC 26.2・26.3（Paper API `1.21.4` 以降）
 - Java: 21 以降
-- 依存プラグイン: なし（任意で PlaceholderAPI に対応）
+- 依存プラグイン: なし（任意で PlaceholderAPI 2.12.3 以降に対応。2.11.x は Paper 26.x で読み込めません）
 - 統合版（Geyser 経由）のプレイヤーにも表示されます
 
 ## 機能
@@ -146,7 +146,7 @@ format: "<white><name></white> <bar> <color><hp>/<max></color>"
 
 ### PlaceholderAPI
 
-[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) が導入されている場合、識別子 `hithealth` の任意拡張を登録します。追加設定は不要で、PlaceholderAPI がなくてもプラグインは通常どおり動作します。
+[PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) が導入されている場合、識別子 `hithealth` の任意拡張を登録します。追加設定は不要で、PlaceholderAPI がなくてもプラグインは通常どおり動作します。サーバースレッド以外（非同期のスコアボードなど）から呼ばれた場合、HP は生きているエンティティではなく最後に表示した時点の値を返します。
 
 | プレースホルダー | 説明 |
 |---|---|
